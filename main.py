@@ -1,7 +1,12 @@
-from io import StringIO
-
+import logging
 import requests
 import pandas as pd
+
+logging.basicConfig(
+    format="%(asctime)s => %(filename)s => %(levelname)s => %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO
+)
 
 # getting all types -> will migrate to _get_types task in DAG
 url = f'https://pokeapi.co/api/v2/type'
@@ -27,3 +32,13 @@ for _type in types:
 pokemon_types = pd.concat(pokemon_types_chunks)
 pokemon_types.to_csv('./pokemon_types.csv', index=False, header=True)
 
+
+# getting all generations -> will migrate to _check_generations_count task in DAG
+def _check_generations_count():
+    url = 'https://pokeapi.co/api/v2/generation'
+    generations = requests.get(url).json()
+
+    logging.info(f'Today exist {generations["count"]} generations')
+
+
+_check_generations_count()
