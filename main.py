@@ -83,3 +83,31 @@ def _get_generations_species():
     pokemon_species = pd.concat(species_chunks)
     pokemon_species.to_csv('./species_pokemons.csv', index=False, header=True)
 
+
+def _get_moves():
+    """Gets all moves from pokemon API"""
+    url = 'https://pokeapi.co/api/v2/move'
+    moves_count = requests.get(url).json()['count']
+
+    url = f'https://pokeapi.co/api/v2/move?offset=0&limit={moves_count}'
+    moves = requests.get(url).json()['results']
+
+    pokemon_moves_chunks = []
+
+    for move in moves:
+        url = move['url']
+        response = requests.get(url).json()['learned_by_pokemon']
+
+        pokemon_moves_chunk = pd.json_normalize(response)
+
+        if not pokemon_moves_chunk.empty:
+            pokemon_moves_chunk['move'] = move['name']
+            pokemon_moves_chunk['pokemon_id'] = pokemon_moves_chunk.apply(lambda row: row['url'].split('/')[-2], axis=1)
+            pokemon_moves_chunk.rename(columns={'name': 'pokemon_name'}, inplace=True)
+            pokemon_moves_chunks.append(pokemon_moves_chunk)
+
+    pokemon_moves = pd.concat(pokemon_moves_chunks)
+    pokemon_moves.to_csv('./pokemon_moves.csv', index=False, header=True)
+
+
+_get_moves()
