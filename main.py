@@ -110,4 +110,30 @@ def _get_moves():
     pokemon_moves.to_csv('./pokemon_moves.csv', index=False, header=True)
 
 
-_get_moves()
+def _get_pokemon_stats():
+    """Gets list of pokemons from API and loads the into pokemon_stats file
+    Will move to _get_pokemons_stats dag in Airflow"""
+    url = 'https://pokeapi.co/api/v2/pokemon'
+    pokemons_count = requests.get(url).json()['count']
+
+    url = f'https://pokeapi.co/api/v2/pokemon?offset=0&limit={pokemons_count}'
+    pokemons = requests.get(url).json()['results']
+
+    pokemon_stats_chunks = []
+    for pokemon in pokemons:
+        url = pokemon['url']
+        raw_pokemon_stats = requests.get(url).json()['stats']
+
+        pokemon_stats_chunk = pd.json_normalize(raw_pokemon_stats) \
+                                .rename(columns={'base_stat': 'value'})
+
+        pokemon_stats_chunk['pokemon'] = pokemon['name']
+
+        pokemon_stats_chunks.append(pokemon_stats_chunk)
+
+    pokemon_stats = pd.concat(pokemon_stats_chunks)
+    pokemon_stats.to_csv('./pokemon_stats.csv', index=False, header=True)
+
+
+_get_pokemon_stats()
+
