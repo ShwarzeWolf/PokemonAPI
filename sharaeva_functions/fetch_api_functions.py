@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from utils.utils import get_data_by_url
+from sharaeva_functions.utils import get_data_by_url
 
 
 def _get_pokemons():
