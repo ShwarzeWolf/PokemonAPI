@@ -23,43 +23,70 @@ create or replace file format CSV type='csv'
 --fact-tables
 create or replace table POKEMONS (
     name string,
-    url string);
+    url string,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 create or replace table TYPES (
     name string,
-    url string);
+    url string,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 create or replace table MOVES (
     name string,
-    url string);
+    url string,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 create or replace table GENERATIONS (
     name string,
-    url string);
+    url string,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 --dimensions
 create or replace table POKEMONS_TYPES (
     pokemon_name string,
-    pokemon_type string);
+    pokemon_type string,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 create or replace table POKEMONS_MOVES (
     pokemon_name string,
-    move_name string);
+    move_name string,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 create or replace table POKEMONS_STATS (
     power string,
     characteristic string,
-    pokemon_name string);
+    pokemon_name string,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 create or replace table GENERATIONS_SPECIES (
     specie_name string,
     specie_url string,
     generation_name string,
-    specie_id integer);
+    specie_id integer,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 create or replace table POKEMONS_SPECIES (
     pokemon_name string,
-    specie_id integer);
+    specie_id integer,
+    filename string,
+    editor string,
+    modify_date timestamp);
 
 --creating streams
 create or replace stream STG_POKEMONS on table POKEMONS;
@@ -72,18 +99,108 @@ create or replace stream STG_POKEMONS_TYPES on table POKEMONS_TYPES;
 create or replace stream STG_GENERATIONS_SPECIES on table GENERATIONS_SPECIES;
 create or replace stream STG_POKEMONS_SPECIES on table POKEMONS_SPECIES;
 
---copying data
-copy into POKEMONS from @staging file_format=CSV pattern='pokemons.csv';
-copy into TYPES from @staging file_format=CSV pattern='types.csv';
-copy into MOVES from @staging file_format=CSV pattern='moves.csv';
-copy into GENERATIONS from @staging file_format=CSV pattern='generations.csv';
-copy into POKEMONS_STATS from @staging file_format=CSV pattern='pokemons_stats.csv';
-copy into POKEMONS_MOVES from @staging file_format=CSV pattern='pokemons_moves.csv';
-copy into POKEMONS_TYPES from @staging file_format=CSV pattern='pokemons_types.csv';
-copy into GENERATIONS_SPECIES from @staging file_format=CSV pattern='generations_species.csv';
-copy into POKEMONS_SPECIES from @staging file_format=CSV pattern='pokemons_species.csv';
+--copying data via pipes
+create or replace pipe LOAD_POKEMONS auto_ingest=true as
+    copy into POKEMONS from (
+        select
+            p.$1,
+            p.$2,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'pokemons.csv') p);
+
+create or replace pipe LOAD_TYPES auto_ingest=true as
+    copy into TYPES from (
+        select
+            p.$1,
+            p.$2,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'types.csv') p);
 
 
+create or replace pipe LOAD_MOVES auto_ingest=true as
+    copy into MOVES from (
+        select
+            p.$1,
+            p.$2,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'moves.csv') p);
+
+
+create or replace pipe LOAD_GENERATIONS auto_ingest=true as
+    copy into GENERATIONS from (
+        select
+            p.$1,
+            p.$2,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'generations.csv') p);
+
+
+create or replace pipe LOAD_POKEMONS_STATS auto_ingest=true as
+    copy into POKEMONS_STATS from (
+        select
+            p.$1,
+            p.$2,
+            p.$3,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'pokemons_stats.csv') p);
+
+
+create or replace pipe LOAD_POKEMONS_MOVES auto_ingest=true as
+    copy into POKEMONS_MOVES from (
+        select
+            p.$1,
+            p.$2,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'pokemons_moves.csv') p);
+
+
+create or replace pipe LOAD_POKEMONS_TYPES auto_ingest=true as
+    copy into POKEMONS_TYPES from (
+        select
+            p.$1,
+            p.$2,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'pokemons_types.csv') p);
+
+
+create or replace pipe LOAD_GENERATIONS_SPECIES auto_ingest=true as
+    copy into GENERATIONS_SPECIES from (
+        select
+            p.$1,
+            p.$2,
+            p.$3,
+            p.$4,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'generations_species.csv') p);
+
+create or replace pipe LOAD_POKEMONS_SPECIES auto_ingest=true as
+    copy into POKEMONS_SPECIES from (
+        select
+            p.$1,
+            p.$2,
+            metadata$filename,
+            current_user(),
+            sysdate()
+        from @staging (file_format => CSV, pattern => 'pokemons_species.csv') p);
+
+
+-- warehouse creation
 create schema if not exists WAREHOUSE;
 use schema WAREHOUSE;
 
@@ -165,7 +282,6 @@ when system$stream_has_data('STAGING.STG_GENERATIONS') as
         where g.metadata$action = 'INSERT';
 
 
---start from here
 create or replace task INSERT_POKEMONS_STATS
 warehouse='DEPLOYMENT_WH'
 schedule='5 minute'
@@ -230,6 +346,8 @@ when system$stream_has_data('STAGING.STG_POKEMONS_SPECIES') as
 --data marts to answer questions
 create schema if not exists DATA_MARTS;
 use schema DATA_MARTS;
+
+use warehouse TASKS_WH;
 
 -- Сколько покемонов в каждом типе (type в терминах API), насколько это меньше чем у следующего по рангу типа? А насколько больше, чем у предыдущего?~~
 create or replace view TYPES_STATISTICS as
