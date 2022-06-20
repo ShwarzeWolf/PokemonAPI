@@ -1,4 +1,7 @@
 import logging
+from functools import wraps
+from time import sleep
+
 import requests
 import pandas as pd
 
@@ -9,18 +12,46 @@ logging.basicConfig(
 )
 
 
+def api_handler(api_call):
+    """Proceeds api calls"""
+    SLEEP_TIME = 5
+    """Amount of time to sleep after API call"""
+    ATTEMPTS = 3
+    """NUmber of times to retry API call in case of failure"""
+
+    @wraps
+    def inner_executor(*args, **kwargs):
+        """Executes api call with time delay """
+        for i in range(ATTEMPTS):
+            try:
+                result = api_call(*args, **kwargs)
+                sleep(SLEEP_TIME)
+                return result
+            except Exception:
+                logging.warning(f'Something went wrong, attempt {i + 1}/{ATTEMPTS}, trying again')
+
+    return inner_executor
+
+
+@api_handler
+def __get_data_by_url(url):
+    """Returns data by provided url"""
+    data = requests.get(url).json()
+    return data
+
+
 def _get_types():
     """Loads all types from Pokemon API into pokemon_types CSV file.
        Will migrate to get_types task in DAG"""
     url = 'https://pokeapi.co/api/v2/type'
-    types = requests.get(url).json()['results']
+    types = __get_data_by_url(url)['results']
 
     pokemon_types_chunks = []
 
     for _type in types:
         url = _type['url']
 
-        response = requests.get(url).json()['pokemon']
+        response = __get_data_by_url(url)['pokemon']
         pokemon_type = pd.json_normalize(response)
 
         if not pokemon_type.empty:
@@ -42,7 +73,7 @@ def _check_generations_count():
     """Gets list of generation from pokemon API and logs info about generation count
        Will migrate to check_generations_count task in DAG"""
     url = 'https://pokeapi.co/api/v2/generation'
-    generations = requests.get(url).json()
+    generations = __get_data_by_url(url)
 
     logging.info(f'Today exist {generations["count"]} generations')
 
@@ -51,13 +82,13 @@ def _get_generations():
     """Gets list of generation from pokemon API and logs info about generation count
        Will migrate _to get_generations task in DAG"""
     url = 'https://pokeapi.co/api/v2/generation'
-    generations = requests.get(url).json()['results']
+    generations = __get_data_by_url(url)['results']
 
     pokemon_generations_chunks = []
 
     for generation in generations:
         url = generation['url']
-        response = requests.get(url).json()['pokemon_species']
+        response = __get_data_by_url(url)['pokemon_species']
         pokemon_species = pd.json_normalize(response)
 
         pokemon_species['generation'] = generation['name']
@@ -75,7 +106,7 @@ def _get_generations_species():
 
     species_chunks = []
     for specie in pokemon_species:
-        response = requests.get(specie).json()['varieties']
+        response = __get_data_by_url(url)['varieties']
         pokemon_species = pd.json_normalize(response)
         pokemon_species['specie_id'] = specie.split('/')[-2]
         species_chunks.append(pokemon_species)
@@ -114,15 +145,15 @@ def _get_pokemon_stats():
     """Gets list of pokemons from API and loads the into pokemon_stats file
     Will move to _get_pokemons_stats dag in Airflow"""
     url = 'https://pokeapi.co/api/v2/pokemon'
-    pokemons_count = requests.get(url).json()['count']
+    pokemons_count = __get_data_by_url(url)['count']
 
     url = f'https://pokeapi.co/api/v2/pokemon?offset=0&limit={pokemons_count}'
-    pokemons = requests.get(url).json()['results']
+    pokemons = __get_data_by_url(url)['results']
 
     pokemon_stats_chunks = []
     for pokemon in pokemons:
         url = pokemon['url']
-        raw_pokemon_stats = requests.get(url).json()['stats']
+        raw_pokemon_stats = __get_data_by_url(url)['stats']
 
         pokemon_stats_chunk = pd.json_normalize(raw_pokemon_stats) \
                                 .rename(columns={'base_stat': 'value'})
@@ -133,7 +164,3 @@ def _get_pokemon_stats():
 
     pokemon_stats = pd.concat(pokemon_stats_chunks)
     pokemon_stats.to_csv('./pokemon_stats.csv', index=False, header=True)
-
-
-_get_pokemon_stats()
-
