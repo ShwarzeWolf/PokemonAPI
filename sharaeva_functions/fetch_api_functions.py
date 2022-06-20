@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from sharaeva_functions.utils import get_data_by_url
+from sharaeva_functions.utils import get_data_by_url, save_file_into_S3, read_data_from_S3_file
 
 
 def _get_pokemons():
@@ -14,14 +14,13 @@ def _get_pokemons():
     pokemons_raw = get_data_by_url(url)['results']
 
     pokemons = pd.json_normalize(pokemons_raw)
-    pokemons.to_csv('./pokemons.csv', index=False, header=True)
+    save_file_into_S3('pokemons.csv', pokemons)
 
 
 def _get_pokemons_stats():
     """Gets list of pokemons from API and loads the into pokemon_stats file
     Will move to _get_pokemons dag in Airflow"""
-    url = 'pokemons.csv'
-    pokemons = pd.read_csv(url)
+    pokemons = read_data_from_S3_file('pokemons.csv')
 
     pokemon_stats_chunks = []
 
@@ -35,8 +34,8 @@ def _get_pokemons_stats():
 
         pokemon_stats_chunks.append(pokemon_stats_chunk)
 
-    pokemon_stats = pd.concat(pokemon_stats_chunks)
-    pokemon_stats.to_csv('./pokemon_stats.csv', index=False, header=True)
+    pokemons_stats = pd.concat(pokemon_stats_chunks)
+    save_file_into_S3(filename='pokemons_stats.csv', data=pokemons_stats)
 
 
 def _get_types():
@@ -48,36 +47,36 @@ def _get_types():
     types_raw = get_data_by_url(url)['results']
 
     types = pd.json_normalize(types_raw)
-    types.to_csv('./types.csv', index=False, header=True)
+    save_file_into_S3('types.csv', types)
 
 
 def _get_pokemon_types():
     """Loads all types and pokemons from Pokemon API into pokemon_types CSV file.
        Will migrate to get_types task in DAG"""
-    url = 'types.csv'
-    types = pd.read_csv(url)
+    types = read_data_from_S3_file('types.csv')
 
-    pokemon_types_chunks = []
+    pokemons_types_chunks = []
 
     for index, _type in types.iterrows():
         url = _type['url']
 
         response = get_data_by_url(url)['pokemon']
-        pokemon_type = pd.json_normalize(response)
+        pokemons_type = pd.json_normalize(response)
 
-        if not pokemon_type.empty:
-            pokemon_type['type'] = _type['name']
+        if not pokemons_type.empty:
+            pokemons_type['type'] = _type['name']
 
             # TODO на подумать - так ли нам нужен id или name в этой таблице?
             #  Там же функциональная зависимость между ними
-            pokemon_type['id'] = pokemon_type.apply(lambda row: row['pokemon.url'].split('/')[-2], axis=1)
-            pokemon_type.rename(columns={'pokemon.name': 'name'}, inplace=True)
-            pokemon_type.drop(columns=['slot', 'pokemon.url'], inplace=True)
+            pokemons_type['id'] = pokemons_type.apply(lambda row: row['pokemon.url'].split('/')[-2], axis=1)
+            pokemons_type.rename(columns={'pokemon.name': 'name'}, inplace=True)
+            pokemons_type.drop(columns=['slot', 'pokemon.url'], inplace=True)
 
-            pokemon_types_chunks.append(pokemon_type)
+            pokemons_types_chunks.append(pokemons_type)
 
-    pokemon_types = pd.concat(pokemon_types_chunks)
-    pokemon_types.to_csv('./pokemon_types.csv', index=False, header=True)
+    pokemons_types = pd.concat(pokemons_types_chunks)
+    save_file_into_S3('pokemons_types.csv', pokemons_types)
+
 
 
 def _get_generations():
@@ -89,14 +88,13 @@ def _get_generations():
     generations_raw = get_data_by_url(url)['results']
 
     generations = pd.json_normalize(generations_raw)
-    generations.to_csv('./generations.csv', index=False, header=True)
+    save_file_into_S3('generations.csv', generations)
 
 
 def _get_generations_species():
     """Gets list of generation from pokemon API and logs info about generation count
        Will migrate _to get_generations task in DAG"""
-    url = 'generations.csv'
-    generations = pd.read_csv(url)
+    generations = read_data_from_S3_file('generations.csv')
 
     pokemon_generations_chunks = []
 
@@ -109,14 +107,13 @@ def _get_generations_species():
         pokemon_species['id'] = pokemon_species.apply(lambda row: row['url'].split('/')[-2], axis=1)
         pokemon_generations_chunks.append(pokemon_species)
 
-    pokemon_generations = pd.concat(pokemon_generations_chunks)
-    pokemon_generations.to_csv('./generations_species.csv', index=False, header=True)
+    generations_species = pd.concat(pokemon_generations_chunks)
+    save_file_into_S3('generations_species.csv', generations_species)
 
 
 def _get_pokemons_species():
     """Gets all pokemons from pokemon species"""
-    url = 'generations_species.csv'
-    pokemon_species = pd.read_csv(url)['url'].unique()
+    pokemon_species = read_data_from_S3_file('generations_species.csv')['url'].unique()
 
     species_chunks = []
 
@@ -127,7 +124,7 @@ def _get_pokemons_species():
         species_chunks.append(pokemon_species)
 
     pokemon_species = pd.concat(species_chunks)
-    pokemon_species.to_csv('./pokemons_species.csv', index=False, header=True)
+    save_file_into_S3('pokemons_species.csv', pokemon_species)
 
 
 def _get_moves():
@@ -138,14 +135,13 @@ def _get_moves():
     url = f'https://pokeapi.co/api/v2/move?offset=0&limit={moves_count}'
     moves_raw = get_data_by_url(url)['results']
 
-    types = pd.json_normalize(moves_raw)
-    types.to_csv('./moves.csv', index=False, header=True)
+    moves = pd.json_normalize(moves_raw)
+    save_file_into_S3('moves.csv', moves)
 
 
 def _get_pokemon_moves():
     """Gets all moves and pokemons from pokemon API"""
-    url = 'moves.csv'
-    moves = pd.read_csv(url)
+    moves = read_data_from_S3_file('moves.csv')
 
     pokemon_moves_chunks = []
 
@@ -162,7 +158,7 @@ def _get_pokemon_moves():
             pokemon_moves_chunks.append(pokemon_moves_chunk)
 
     pokemon_moves = pd.concat(pokemon_moves_chunks)
-    pokemon_moves.to_csv('./pokemon_moves.csv', index=False, header=True)
+    save_file_into_S3('pokemon_moves.csv', pokemon_moves)
 
 
 def _check_generations_count():
