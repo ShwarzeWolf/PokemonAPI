@@ -53,7 +53,7 @@ def _process_failure() -> None:
     logging.info('Something went wrong')
 
 
-def _load_string_on_s3(data: str, key: str) -> None:
+def load_string_on_s3(data: str, key: str) -> None:
     """Loads data into S3 bucket"""
     s3hook = S3Hook()
     s3hook.load_string(string_data=data, key=key, replace=True)
@@ -68,10 +68,10 @@ def save_file_into_S3(filename, data):
     s3_key = f'{Variable.get("snowpipe_files")}Sharaeva/{filename}'
     data = str(data_stream.getvalue())
 
-    _load_string_on_s3(data, s3_key)
+    load_string_on_s3(data, s3_key)
 
 
-def read_data_from_S3_file(filename):
+def read_file_from_S3(filename):
     """Reads saved files from buckets"""
     s3_hook = S3Hook()
 

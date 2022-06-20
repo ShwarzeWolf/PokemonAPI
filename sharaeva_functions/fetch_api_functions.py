@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from sharaeva_functions.utils import get_data_by_url, save_file_into_S3, read_data_from_S3_file
+from sharaeva_functions.utils import get_data_by_url, save_file_into_S3, read_file_from_S3
 
 
 def _get_pokemons():
@@ -20,7 +20,7 @@ def _get_pokemons():
 def _get_pokemons_stats():
     """Gets list of pokemons from API and loads the into pokemon_stats file
     Will move to _get_pokemons dag in Airflow"""
-    pokemons = read_data_from_S3_file('pokemons.csv')
+    pokemons = read_file_from_S3('pokemons.csv')
 
     pokemon_stats_chunks = []
 
@@ -53,7 +53,7 @@ def _get_types():
 def _get_pokemon_types():
     """Loads all types and pokemons from Pokemon API into pokemon_types CSV file.
        Will migrate to get_types task in DAG"""
-    types = read_data_from_S3_file('types.csv')
+    types = read_file_from_S3('types.csv')
 
     pokemons_types_chunks = []
 
@@ -94,7 +94,7 @@ def _get_generations():
 def _get_generations_species():
     """Gets list of generation from pokemon API and logs info about generation count
        Will migrate _to get_generations task in DAG"""
-    generations = read_data_from_S3_file('generations.csv')
+    generations = read_file_from_S3('generations.csv')
 
     pokemon_generations_chunks = []
 
@@ -113,7 +113,7 @@ def _get_generations_species():
 
 def _get_pokemons_species():
     """Gets all pokemons from pokemon species"""
-    pokemon_species = read_data_from_S3_file('generations_species.csv')['url'].unique()
+    pokemon_species = read_file_from_S3('generations_species.csv')['url'].unique()
 
     species_chunks = []
 
@@ -141,7 +141,7 @@ def _get_moves():
 
 def _get_pokemon_moves():
     """Gets all moves and pokemons from pokemon API"""
-    moves = read_data_from_S3_file('moves.csv')
+    moves = read_file_from_S3('moves.csv')
 
     pokemon_moves_chunks = []
 
@@ -158,7 +158,7 @@ def _get_pokemon_moves():
             pokemon_moves_chunks.append(pokemon_moves_chunk)
 
     pokemon_moves = pd.concat(pokemon_moves_chunks)
-    save_file_into_S3('pokemon_moves.csv', pokemon_moves)
+    save_file_into_S3('pokemons_moves.csv', pokemon_moves)
 
 
 def _check_generations_count():
