@@ -28,6 +28,3 @@
 
 ## Архитектура warehouse
 ![img.png](schema.PNG)
-
-## TODO 
-- добавить snowpipes
