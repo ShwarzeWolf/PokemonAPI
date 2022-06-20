@@ -81,3 +81,22 @@ def read_data_from_S3_file(filename):
     data_IO = StringIO(data_string)
 
     return pd.read_csv(data_IO)
+
+
+def _cleanup() -> None:
+    """Deleting files from snowpipe/Sharaeva folder"""
+    unprocessed_files_folder_url = Variable.get('snowpipe_files')
+
+    _, _, bucket_name, unprocessed_files_folder, _ = unprocessed_files_folder_url.split('/')
+
+    s3_hook = S3Hook()
+
+    all_files = s3_hook.list_keys(
+        bucket_name=bucket_name,
+        prefix=f'{unprocessed_files_folder}/Sharaeva/',
+        delimiter='/')
+
+    files_to_delete = [file for file in all_files if file.endswith('.csv')]
+    s3_hook.delete_objects(bucket=bucket_name, keys=files_to_delete)
+
+    logging.info('Data cleaned')
