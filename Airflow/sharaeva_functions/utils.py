@@ -38,7 +38,7 @@ def api_handler(api_call):
 
 @api_handler
 def get_data_by_url(url):
-    """Returns data by provided url"""
+    """Returns results by provided url"""
     data = requests.get(url).json()
     return data
 
