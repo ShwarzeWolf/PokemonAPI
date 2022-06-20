@@ -2,7 +2,7 @@ create database pokemons;
 
 create or replace stage staging
   url='s3://de-school-snowflake/snowpipe/Sharaeva/'
-  credentials=(aws_key_id='aws_key_id' aws_secret_key='aws_secret_key);
+  credentials=(aws_key_id='aws_key_id' aws_secret_key='aws_secret_key');
 
 list @staging;
 
