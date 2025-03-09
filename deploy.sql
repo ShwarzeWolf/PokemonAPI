@@ -1,3 +1,6 @@
+CREATE SCHEMA IF NOT EXISTS silver;
+CREATE SCHEMA IF NOT EXISTS golden;
+
 -- Function to refresh types_statistics table
 CREATE OR REPLACE FUNCTION golden.refresh_types_statistics() RETURNS VOID AS $$
 BEGIN

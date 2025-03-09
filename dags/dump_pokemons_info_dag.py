@@ -2,6 +2,7 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 import pendulum
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 from lib.api_functions import (
     dump_types,
@@ -78,6 +79,12 @@ with DAG(
         task_id='finish'
     )
 
+    trigger_child_dag_op = TriggerDagRunOperator(
+        task_id='trigger_load_pokemons_info_dag',
+        trigger_dag_id='load_pokemons_info_dag',
+        wait_for_completion=False
+    )
+
     start_op >> [dump_types_op, dump_moves_op, dump_generations_op, dump_pokemons_op]
 
     dump_types_op >> dump_pokemon_types_op
@@ -86,3 +93,5 @@ with DAG(
     dump_pokemons_op >> dump_pokemons_stats_op
 
     [dump_pokemon_types_op, dump_pokemon_moves_op, dump_pokemons_species_op, dump_pokemons_stats_op] >> finish_op
+
+    finish_op >> trigger_child_dag_op

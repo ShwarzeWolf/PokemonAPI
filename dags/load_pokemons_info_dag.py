@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 import pendulum
 
@@ -120,6 +121,12 @@ with DAG(
         task_id='finish'
     )
 
+    trigger_child_dag_op = TriggerDagRunOperator(
+        task_id='trigger_sync_golden_layer_dag',
+        trigger_dag_id='sync_golden_layer_dag',
+        wait_for_completion=False
+    )
+
     start_op >> [load_types_op, load_moves_op, load_generations_op, load_pokemons_op]
 
     load_types_op >> load_pokemon_types_op
@@ -128,3 +135,5 @@ with DAG(
     load_pokemons_op >> load_pokemons_stats_op
 
     [load_pokemon_types_op, load_pokemon_moves_op, load_pokemons_species_op, load_pokemons_stats_op] >> finish_op
+
+    finish_op >> trigger_child_dag_op
