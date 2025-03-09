@@ -1,6 +1,37 @@
 CREATE SCHEMA IF NOT EXISTS silver;
 CREATE SCHEMA IF NOT EXISTS golden;
 
+CREATE TABLE IF NOT EXISTS golden.types_statistics (
+    "Pokemon Type" TEXT PRIMARY KEY,
+    "Number of Pokemons" INT,
+    "Delta from next rank" INT,
+    "Delta from previous rank" INT
+);
+
+CREATE TABLE IF NOT EXISTS golden.moves_statistics (
+    "Move Name" TEXT PRIMARY KEY,
+    "Attack Usage" INT,
+    "Delta from next rank" INT,
+    "Delta from previous rank" INT
+);
+
+CREATE TABLE IF NOT EXISTS golden.stats_statistics (
+    "Pokemon" TEXT PRIMARY KEY,
+    "Total Power" INT
+);
+
+CREATE TABLE IF NOT EXISTS golden.types_generations_statistics (
+    "Pokemon Type" TEXT PRIMARY KEY,
+    "I" INT DEFAULT 0,
+    "II" INT DEFAULT 0,
+    "III" INT DEFAULT 0,
+    "IV" INT DEFAULT 0,
+    "V" INT DEFAULT 0,
+    "VI" INT DEFAULT 0,
+    "VII" INT DEFAULT 0,
+    "VIII" INT DEFAULT 0
+);
+
 -- Function to refresh types_statistics table
 CREATE OR REPLACE FUNCTION golden.refresh_types_statistics() RETURNS VOID AS $$
 BEGIN
