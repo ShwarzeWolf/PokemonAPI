@@ -25,7 +25,7 @@ def dump_pokemons(engine):
 
 def dump_pokemon_stats(engine):
     """Gets list of pokemons and loads their stats into the database"""
-    query = "SELECT name, url FROM pokemons"
+    query = "SELECT name, url FROM silver.pokemons"
     pokemons = pd.read_sql(query, engine)
 
     pokemons_stats_chunks = []
@@ -62,7 +62,7 @@ def dump_types(engine):
 
 def dump_pokemon_types(engine):
     """Loads all types and pokemons into the database"""
-    query = "SELECT name, url FROM types"
+    query = "SELECT name, url FROM silver.types"
     types = pd.read_sql(query, engine)
 
     pokemons_types_chunks = []
@@ -98,7 +98,7 @@ def dump_moves(engine):
 
 def dump_pokemon_moves(engine):
     """Gets all moves and pokemons from API and loads into the database"""
-    query = "SELECT name, url FROM moves"
+    query = "SELECT name, url FROM silver.moves"
     moves = pd.read_sql(query, engine)
 
     pokemons_moves_chunks = []
@@ -132,7 +132,7 @@ def dump_generations(engine):
 
 def dump_generation_species(engine):
     """Gets list of generation species and loads them into the database"""
-    query = "SELECT name, url FROM generations"
+    query = "SELECT name, url FROM silver.generations"
     generations = pd.read_sql(query, engine)
 
     pokemons_generations_chunks = []
@@ -154,7 +154,7 @@ def dump_generation_species(engine):
 
 def dump_pokemon_species(engine):
     """Gets all pokemons from pokemon species and loads them into the database"""
-    query = "SELECT specie_url FROM generations_species"
+    query = "SELECT specie_url FROM silver.generations_species"
     species = pd.read_sql(query, engine)['specie_url'].unique()
 
     pokemons_species_chunks = []
