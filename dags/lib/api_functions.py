@@ -130,8 +130,21 @@ def dump_pokemon_species():
     upload_to_minio('bronze', 'pokemon_species.csv', species_df)
 
 
-def _check_generations_count():
-    """Logs the count of generations from the API"""
-    url = 'https://pokeapi.co/api/v2/generation'
-    generations = get_data_by_url(url)
-    logging.info(f'Today exist {generations["count"]} generations')
+def download_from_minio(bucket_name, file_name):
+    """Downloads CSV file from MinIO and returns it as a DataFrame"""
+    s3 = boto3.client(
+        's3',
+        endpoint_url='http://minio:9000',
+        aws_access_key_id='admin',
+        aws_secret_access_key='adminadmin'
+    )
+
+    obj = s3.get_object(Bucket=bucket_name, Key=file_name)
+    return pd.read_csv(obj['Body'])
+
+
+def load_data(engine, file_name, table_name):
+    """Loads data from MinIO into the database"""
+    data_df = download_from_minio('bronze', file_name)
+    data_df.to_sql(table_name, engine, if_exists='replace', index=False, schema='silver')
+    logging.info(f'{table_name} successfully ingested into the database')

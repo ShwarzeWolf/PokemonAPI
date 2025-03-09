@@ -127,6 +127,7 @@ services:
       - "5432:5432"
     volumes:
       - "./postgres_data:/var/lib/postgresql/data:rw"
+      - "./deploy.sql:/docker-entrypoint-initdb.d/deploy.sql"
     environment:
       - POSTGRES_PASSWORD=123456
       - POSTGRES_USER=postgres
@@ -142,6 +143,17 @@ services:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: adminadmin
     command: [ "server", "/data", "--console-address", ":9090" ]
+
+  minio-setup:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - >
+        /usr/bin/mc alias set myminio http://minio:9000 admin adminadmin &&
+        /usr/bin/mc mb myminio/bronze &&
+        /usr/bin/mc policy set public myminio/bronze
 
 volumes:
   postgres-db-volume:
