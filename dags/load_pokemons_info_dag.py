@@ -9,7 +9,6 @@ from lib.api_functions import load_data
 
 
 def get_engine():
-    """Получаем SQLAlchemy engine через PostgresHook"""
     hook = PostgresHook(postgres_conn_id='warehouse')
     return hook.get_sqlalchemy_engine()
 
