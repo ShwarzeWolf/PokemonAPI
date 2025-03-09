@@ -42,7 +42,7 @@ with DAG(
         op_kwargs={
             'engine': get_engine(),
             'file_name': 'pokemon_types.csv',
-            'table_name': 'types',
+            'table_name': 'pokemon_types',
         }
     )
 
