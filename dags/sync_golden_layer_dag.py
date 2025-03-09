@@ -8,7 +8,7 @@ import pendulum
 def execute_sql_functions():
     """Executes a given SQL function in PostgreSQL."""
     sync_functions = (
-        'golden.refresh_types_statistics',
+        # 'golden.refresh_types_statistics',
         'golden.refresh_moves_statistics',
         'golden.refresh_stats_statistics',
         'golden.refresh_types_generations_statistics',

@@ -91,11 +91,10 @@ BEGIN
         COUNT(CASE WHEN gs.generation = 'generation-iv' THEN pt.pokemon END) AS "IV",
         COUNT(CASE WHEN gs.generation = 'generation-v' THEN pt.pokemon END) AS "V",
         COUNT(CASE WHEN gs.generation = 'generation-vi' THEN pt.pokemon END) AS "VI",
-        COUNT(CASE WHEN gs.generation = 'generation-vii' THEN pt.pokemon END) AS "VII",
-        COUNT(CASE WHEN gs.generation = 'generation-viii' THEN pt.pokemon END) AS "VIII"
+        COUNT(CASE WHEN gs.generation = 'generation-vii' THEN pt.pokemon END) AS "VII"
     FROM silver.pokemon_types pt
     INNER JOIN silver.pokemon_species ps ON pt.pokemon = ps.pokemon
-    INNER JOIN silver.generations_species gs ON ps.specie_id = gs.specie_id
+    INNER JOIN silver.generation_species gs ON ps.specie_id = gs.specie_id
     GROUP BY pt."type"
     ORDER BY "Pokemon Type";
 END;

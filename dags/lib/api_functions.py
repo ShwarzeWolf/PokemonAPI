@@ -41,12 +41,16 @@ def dump_pokemons():
 
 def dump_pokemon_stats():
     """Gets list of pokemons and uploads their stats to MinIO"""
-    url = 'https://pokeapi.co/api/v2/pokemon?offset=0&limit=100'
-    pokemons = get_data_by_url(url)['results']
+    url = 'https://pokeapi.co/api/v2/pokemon'
+    pokemons_count = get_data_by_url(url)['count']
+
+    url = f'https://pokeapi.co/api/v2/pokemon?offset=0&limit={pokemons_count}'
+    pokemons_raw = get_data_by_url(url)['results']
+    pokemons = pd.json_normalize(pokemons_raw)
 
     pokemons_stats_chunks = []
 
-    for pokemon in pokemons:
+    for _, pokemon in pokemons.iterrows():
         url = pokemon['url']
         raw_pokemon_stats = get_data_by_url(url)['stats']
         pokemons_stats_chunk = pd.json_normalize(raw_pokemon_stats)
@@ -77,8 +81,26 @@ def dump_types():
 def dump_pokemon_types():
     """Gets list of pokemon types and uploads to MinIO"""
     url = 'https://pokeapi.co/api/v2/type'
-    types = get_data_by_url(url)['results']
-    types_df = pd.json_normalize(types)
+    types_count = get_data_by_url(url)['count']
+
+    url = f'https://pokeapi.co/api/v2/type?offset=0&limit={types_count}'
+    types_raw = get_data_by_url(url)['results']
+    types = pd.json_normalize(types_raw)
+
+    pokemons_types_chunks = []
+
+    for _, _type in types.iterrows():
+        url = _type['url']
+        response = get_data_by_url(url)['pokemon']
+        pokemons_types_chunk = pd.json_normalize(response)
+
+        if not pokemons_types_chunk.empty:
+            pokemons_types_chunk['type'] = _type['name']
+            pokemons_types_chunk.rename(columns={'pokemon.name': 'pokemon'}, inplace=True)
+            pokemons_types_chunk.drop(columns=['slot', 'pokemon.url'], inplace=True)
+            pokemons_types_chunks.append(pokemons_types_chunk)
+
+    types_df = pd.concat(pokemons_types_chunks)
     upload_to_minio('bronze', 'pokemon_types.csv', types_df)
 
 
@@ -95,11 +117,57 @@ def dump_moves():
 
 
 def dump_pokemon_moves():
-    """Gets all moves and pokemons from API and uploads to MinIO"""
+    """Gets all moves and pokemons from API and loads into the database"""
     url = 'https://pokeapi.co/api/v2/move'
-    moves = get_data_by_url(url)['results']
-    moves_df = pd.json_normalize(moves)
-    upload_to_minio('bronze', 'pokemon_moves.csv', moves_df)
+    moves_count = get_data_by_url(url)['count']
+
+    url = f'https://pokeapi.co/api/v2/move?offset=0&limit={moves_count}'
+    moves_raw = get_data_by_url(url)['results']
+    moves = pd.json_normalize(moves_raw)
+
+    pokemons_moves_chunks = []
+
+    for _, move in moves.iterrows():
+        url = move['url']
+        response = get_data_by_url(url)['learned_by_pokemon']
+        pokemons_moves_chunk = pd.json_normalize(response)
+
+        if not pokemons_moves_chunk.empty:
+            pokemons_moves_chunk['move'] = move['name']
+            pokemons_moves_chunk.rename(columns={'name': 'pokemon'}, inplace=True)
+            pokemons_moves_chunk.drop(columns=['url'], inplace=True)
+            pokemons_moves_chunks.append(pokemons_moves_chunk)
+
+    pokemon_moves_df = pd.concat(pokemons_moves_chunks)
+    upload_to_minio('bronze', 'pokemon_moves.csv', pokemon_moves_df)
+    logging.info('Pokemon moves successfully ingested into the database')
+
+
+def dump_generation_species():
+    """Gets list of generation species and loads them into the database"""
+    url = 'https://pokeapi.co/api/v2/generation'
+    generations_count = get_data_by_url(url)['count']
+
+    url = f'https://pokeapi.co/api/v2/generation?offset=0&limit={generations_count}'
+    generations_raw = get_data_by_url(url)['results']
+    generations = pd.json_normalize(generations_raw)
+
+    pokemons_generations_chunks = []
+
+    for _, generation in generations.iterrows():
+        url = generation['url']
+        response = get_data_by_url(url)['pokemon_species']
+        pokemons_species_chunk = pd.json_normalize(response)
+
+        if not pokemons_species_chunk.empty:
+            pokemons_species_chunk['generation'] = generation['name']
+            pokemons_species_chunk['specie_id'] = pokemons_species_chunk['url'].apply(lambda x: x.split('/')[-2])
+            pokemons_species_chunk.rename(columns={'name': 'specie_name', 'url': 'specie_url'}, inplace=True)
+            pokemons_generations_chunks.append(pokemons_species_chunk)
+
+    generations_species_df = pd.concat(pokemons_generations_chunks)
+    upload_to_minio('bronze', 'generation_species.csv', generations_species_df)
+    logging.info('Generation species successfully ingested into the database')
 
 
 def dump_generations():
@@ -114,20 +182,25 @@ def dump_generations():
     upload_to_minio('bronze', 'generations.csv', generations)
 
 
-def dump_generation_species():
-    """Gets list of generation species and uploads to MinIO"""
-    url = 'https://pokeapi.co/api/v2/generation'
-    generations = get_data_by_url(url)['results']
-    generations_df = pd.json_normalize(generations)
-    upload_to_minio('bronze', 'generation_species.csv', generations_df)
-
-
 def dump_pokemon_species():
-    """Gets all pokemons from pokemon species and uploads to MinIO"""
-    url = 'https://pokeapi.co/api/v2/pokemon-species'
-    species = get_data_by_url(url)['results']
-    species_df = pd.json_normalize(species)
-    upload_to_minio('bronze', 'pokemon_species.csv', species_df)
+    """Gets all pokemons from pokemon species and loads them into the database"""
+    species_df = download_from_minio('bronze', 'generation_species.csv')
+    species = species_df['specie_url'].unique()
+
+    pokemons_species_chunks = []
+
+    for specie in species:
+        response = get_data_by_url(specie)['varieties']
+        pokemons_species_chunk = pd.json_normalize(response)
+
+        pokemons_species_chunk['specie_id'] = specie.split('/')[-2]
+        pokemons_species_chunk.rename(columns={'pokemon.name': 'pokemon'}, inplace=True)
+        pokemons_species_chunk.drop(columns=['is_default', 'pokemon.url'], inplace=True)
+        pokemons_species_chunks.append(pokemons_species_chunk)
+
+    pokemons_species_df = pd.concat(pokemons_species_chunks)
+    upload_to_minio('bronze', 'pokemon_species.csv', pokemons_species_df)
+    logging.info('Pokemon species successfully ingested into the database')
 
 
 def download_from_minio(bucket_name, file_name):
