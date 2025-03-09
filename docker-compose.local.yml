@@ -132,5 +132,16 @@ services:
       - POSTGRES_USER=postgres
       - DATABASE_NAME=postgres
 
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: adminadmin
+    command: [ "server", "/data", "--console-address", ":9090" ]
+
 volumes:
   postgres-db-volume:
