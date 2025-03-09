@@ -15,16 +15,16 @@
 
 ## Ответы на вопросы
 #### Сколько покемонов в каждом типе, насколько это меньше чем у следующего по рангу типа? А насколько больше, чем у предыдущего?
-![img.png](types_statistics.PNG)
+![img.png](docs/types_statistics.PNG)
 
 #### Сколько у разных атак использующих их покемонов? + показать дельту от следующей и предыдущей по популярности атаки. 
-![img.png](moves_statistics.PNG)
+![img.png](docs/moves_statistics.PNG)
 
 #### Составить рейтинг покемонов по сумме их характеристик
-![img.png](stats_statistics.PNG)
+![img.png](docs/stats_statistics.PNG)
 
 #### Показать количество покемонов по типам и поколениям
-![img.png](types_generations_statistics.PNG)
+![img.png](docs/types_generations_statistics.PNG)
 
 ## Архитектура warehouse
-![img.png](schema.PNG)
+![img.png](docs/schema.PNG)
